@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Whack a Pirate!</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Pirata+One&display=swap');
+        
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: 'Pirata One', cursive;
+            background-image: linear-gradient(to bottom, #4a7c59, #2c4e3a);
+            padding: 20px;
+            color: #f4e1d2;
+            margin: 0;
+            min-height: 100vh;
+        }
+        
+        .game-container {
+            background-color: rgba(76, 52, 33, 0.7);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+            text-align: center;
+        }
+
+        .game-title {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            text-shadow: 3px 3px 0 #8b4513, 6px 6px 0 rgba(0,0,0,0.3);
+            color: #ffd700;
+        }
+
+        #gameBoard {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            max-width: 600px;
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        .hole {
+            width: 150px;
+            height: 150px;
+            background-color: #8B4513;
+            border-radius: 50%;
+            position: relative;
+            overflow: hidden;
+            box-shadow: inset 0 -10px 20px rgba(0,0,0,0.3);
+        }
+
+        .pirate, .bomb {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            bottom: -100px;
+            left: 25px;
+            transition: all 0.2s;
+            cursor: pointer;
+            filter: drop-shadow(3px 3px 2px rgba(0,0,0,0.5));
+        }
+
+        .pirate:hover, .bomb:hover {
+            transform: scale(1.1) rotate(5deg);
+        }
+
+        #scoreBoard, #livesBoard {
+            font-size: 24px;
+            margin: 10px 0;
+            color: #ffd700;
+        }
+
+        #gameOver {
+            display: none;
+            color: #ff4500;
+            font-size: 4rem;
+            text-shadow: 3px 3px 0 rgba(0,0,0,0.5);
+            margin-top: 20px;
+        }
+
+        .btn {
+            background-color: #ffd700;
+            color: #8b4513;
+            border: none;
+            padding: 10px 20px;
+            font-family: 'Pirata One', cursive;
+            font-size: 1.5rem;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        .btn:hover {
+            transform: scale(1.1);
+            background-color: #ffeb3b;
+        }
+
+        .sound-control {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+        }
+
+        #musicBtn, #soundBtn {
+            background-color: #ffd700;
+            color: #8b4513;
+            border: none;
+            padding: 10px 20px;
+            font-family: 'Pirata One', cursive;
+            font-size: 1.5rem;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            margin-right: 10px;
+        }
+
+        #musicBtn:hover, #soundBtn:hover {
+            transform: scale(1.1);
+            background-color: #ffeb3b;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1 class="game-title">🏴‍☠️ Whack a Pirate! 🏴‍☠️</h1>
+        
+        <div id="scoreBoard">Score: <span id="score">0</span></div>
+        <div id="livesBoard">Lives: <span id="lives">3</span></div>
+        
+        <div id="gameBoard">
+            <div class="hole"><img class="pirate" src="pirate.jpg"></div>
+            <div class="hole"><img class="pirate" src="pirate.jpg"></div>
+            <div class="hole"><img class="bomb black-bomb" src="black-bomb.jpg"></div>
+            <div class="hole"><img class="bomb red-bomb" src="red-bomb.jpg"></div>
+            <div class="hole"><img class="pirate" src="pirate.jpg"></div>
+            <div class="hole"><img class="pirate" src="pirate.jpg"></div>
+            <div class="hole"><img class="bomb black-bomb" src="black-bomb.jpg"></div>
+            <div class="hole"><img class="pirate" src="pirate.jpg"></div>
+            <div class="hole"><img class="bomb red-bomb" src="red-bomb.jpg"></div>
+        </div>
+        
+        <button id="startBtn" class="btn">Start Game!</button>
+        
+        <div id="gameOver">GAME OVER!</div>
+        <button id="restartBtn" class="btn" style="display:none;">New Game!</button>
+    </div>
+
+    <div class="sound-control">
+        <button onclick="toggleSound()" id="soundBtn" class="btn">🔊 SFX On</button>
+        <button onclick="toggleMusic()" id="musicBtn" class="btn">🎵 Music On</button>
+    </div>
+
+    <script>
+        const holes = document.querySelectorAll('.hole');
+        const pirates = document.querySelectorAll('.pirate');
+        const blackBombs = document.querySelectorAll('.black-bomb');
+        const redBombs = document.querySelectorAll('.red-bomb');
+        const scoreElement = document.getElementById('score');
+        const livesElement = document.getElementById('lives');
+        const gameOverElement = document.getElementById('gameOver');
+        const restartBtn = document.getElementById('restartBtn');
+        const startBtn = document.getElementById('startBtn');
+        const gameBoard = document.getElementById('gameBoard');
+        const musicBtn = document.getElementById('musicBtn');
+        const soundBtn = document.getElementById('soundBtn');
+        
+        let score = 0;
+        let lives = 3;
+        let gameActive = false;
+        let currentTarget = null;
+        let pirateTimer;
+        let musicPlaying = false;
+        let soundEnabled = true;
+
+        const backgroundMusic = new Audio('audio.mp3'); 
+        backgroundMusic.loop = true;
+        backgroundMusic.volume = 0.5;
+
+        const hitSound = new Audio('hit.m4a');
+        hitSound.volume = 0.5;
+
+        const bombSound = new Audio('bomb.mp3');
+        bombSound.volume = 0.5;
+
+        function randomTarget() {
+            if (currentTarget) {
+                if (currentTarget.classList.contains('pirate')) {
+                    lives--;
+                    livesElement.textContent = lives;
+                    
+                    if (lives <= 0) {
+                        endGame();
+                        return;
+                    }
+                }
+            }
+
+            holes.forEach(hole => {
+                const target = hole.querySelector('.pirate, .bomb');
+                if (target) target.style.bottom = '-100px';
+            });
+
+            const allTargets = [...pirates, ...blackBombs, ...redBombs];
+            currentTarget = allTargets[Math.floor(Math.random() * allTargets.length)];
+            currentTarget.style.bottom = '0px';
+        }
+
+        function handleTarget(event) {
+    if (!gameActive) return;
+    
+    if (event.target === currentTarget) {
+        event.target.style.bottom = '-100px';
+        
+        if (event.target.classList.contains('pirate')) {
+            score += 10;
+            scoreElement.textContent = score;
+            if (soundEnabled) {
+                hitSound.currentTime = 0; 
+                hitSound.play().catch(error => console.log('Error playing hit sound:', error));
+            }
+        } else if (event.target.classList.contains('black-bomb') || event.target.classList.contains('red-bomb')) {
+            if (event.target.classList.contains('black-bomb')) {
+                lives--;
+                livesElement.textContent = lives;
+            }
+
+            if (soundEnabled) {
+                bombSound.currentTime = 0;
+                bombSound.play().catch(error => console.log('Error playing bomb sound:', error));
+            }
+
+            if (event.target.classList.contains('red-bomb')) {
+                endGame();
+                return;
+            }
+        }
+
+        if (lives <= 0) {
+            endGame();
+        }
+
+        currentTarget = null;
+    }
+}
+
+        function startGame() {
+            gameActive = true;
+            score = 0;
+            lives = 3;
+            scoreElement.textContent = score;
+            livesElement.textContent = lives;
+            gameOverElement.style.display = 'none';
+            restartBtn.style.display = 'none';
+            startBtn.style.display = 'none';
+            gameBoard.style.opacity = '1';
+            gameBoard.style.pointerEvents = 'auto';
+
+            pirateTimer = setInterval(randomTarget, 1000);
+        }
+
+        function endGame() {
+            clearInterval(pirateTimer);
+            gameActive = false;
+            gameOverElement.style.display = 'block';
+            restartBtn.style.display = 'inline-block';
+            gameBoard.style.opacity = '0.3';
+            gameBoard.style.pointerEvents = 'none';
+        }
+
+        function toggleMusic() {
+            musicPlaying = !musicPlaying;
+            
+            if (musicPlaying) {
+                musicBtn.textContent = '🎵 Music On';
+                backgroundMusic.play().catch(error => {
+                    console.log('Error playing background music:', error);
+                    musicPlaying = false;
+                    musicBtn.textContent = '🎵 Music Off';
+                });
+            } else {
+                musicBtn.textContent = '🎵 Music Off';
+                backgroundMusic.pause();
+                backgroundMusic.currentTime = 0;
+            }
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            
+            if (soundEnabled) {
+                soundBtn.textContent = '🔊 SFX On';
+            } else {
+                soundBtn.textContent = '🔇 SFX Off';
+            }
+        }
+
+        function initMusic() {
+            if (!musicPlaying) {
+                toggleMusic();
+                startBtn.removeEventListener('click', initMusic);
+            }
+        }
+
+        holes.forEach(hole => {
+            const target = hole.querySelector('.pirate, .bomb');
+            if (target) {
+                target.addEventListener('click', handleTarget);
+            }
+        });
+
+        startBtn.addEventListener('click', startGame);
+        startBtn.addEventListener('click', initMusic);
+        restartBtn.addEventListener('click', startGame);
+    </script>
+</body>
+</html>
