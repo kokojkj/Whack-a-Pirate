@@ -9,3 +9,8 @@ want to test it : https://kokojkj.github.io/Whack-a-Pirate/
 
 a small note
 this project is done with some help from ai 
+
+i forget 
+images from freepik
+sound effects from pixabay
+music from high seas shipyard ^-^
